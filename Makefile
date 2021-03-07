@@ -1,8 +1,15 @@
 all:
-	#elm make src/Main.elm
-	#elm make src/Main.elm --optimize --output=main.js
+
+_out/%.html: src/%.elm _out
+	elm make $< --output=$@
+
+_out:
+	mkdir -p $@
 
 reactor:
 	elm reactor
 
-.PHONY: all reactor
+clean:
+	rm -rf _out
+
+.PHONY: all reactor clean
