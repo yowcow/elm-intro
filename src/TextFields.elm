@@ -1,7 +1,7 @@
 module TextFields exposing (main)
 
 import Browser
-import Html exposing (Attribute, Html, div, input, text)
+import Html exposing (Html, div, input, text)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onInput)
 

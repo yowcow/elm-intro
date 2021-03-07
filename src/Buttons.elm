@@ -1,4 +1,4 @@
-module Button exposing (Model, init, main, update, view)
+module Buttons exposing (main)
 
 import Browser
 import Html exposing (Html, button, div, text)
@@ -6,7 +6,11 @@ import Html.Events exposing (onClick)
 
 
 main =
-    Browser.sandbox { init = init, update = update, view = view }
+    Browser.sandbox
+        { init = init
+        , update = update
+        , view = view
+        }
 
 
 type alias Model =
