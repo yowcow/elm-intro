@@ -1,4 +1,4 @@
-module RANDOM exposing (main)
+module Dice exposing (main)
 
 import Browser
 import Html exposing (..)
