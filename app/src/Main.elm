@@ -7,6 +7,7 @@ import Http
 import Json.Decode as D
 
 
+main : Program () Model Msg
 main =
     Browser.document
         { init = init
@@ -26,10 +27,16 @@ type Counter
     | Number Int
 
 
+type alias MyInput =
+    { success : Bool
+    , count : Int
+    }
+
+
 type Msg
     = Increment
     | Decrement
-    | GotResult (Result Http.Error Int)
+    | GotResult (Result Http.Error MyInput)
 
 
 init : () -> ( Model, Cmd Msg )
@@ -43,8 +50,19 @@ initNumber : () -> Cmd Msg
 initNumber _ =
     Http.get
         { url = "/init.json"
-        , expect = Http.expectJson GotResult (D.field "body" (D.field "count" D.int))
+        , expect = Http.expectJson GotResult decodeInput
         }
+
+
+decodeInput : D.Decoder MyInput
+decodeInput =
+    D.map2 MyInput
+        (D.field "status"
+            (D.field "success" D.bool)
+        )
+        (D.field "body"
+            (D.field "count" D.int)
+        )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -86,10 +104,16 @@ update msg model =
 
         GotResult result ->
             case result of
-                Ok num ->
-                    ( Number num
-                    , Cmd.none
-                    )
+                Ok input ->
+                    if input.success then
+                        ( Number input.count
+                        , Cmd.none
+                        )
+
+                    else
+                        ( Failure
+                        , Cmd.none
+                        )
 
                 Err _ ->
                     ( Failure
