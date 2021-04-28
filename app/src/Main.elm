@@ -4,7 +4,7 @@ import Browser
 import Html exposing (button, div, text)
 import Html.Events exposing (onClick)
 import Http
-import Json.Decode exposing (Decoder, field, int)
+import Json.Decode as D
 
 
 main =
@@ -16,7 +16,11 @@ main =
         }
 
 
-type Model
+type alias Model =
+    Counter
+
+
+type Counter
     = Loading
     | Failure
     | Number Int
@@ -31,11 +35,16 @@ type Msg
 init : () -> ( Model, Cmd Msg )
 init _ =
     ( Loading
-    , Http.get
-        { url = "/init.json"
-        , expect = Http.expectJson GotResult (field "body" (field "count" int))
-        }
+    , initNumber ()
     )
+
+
+initNumber : () -> Cmd Msg
+initNumber _ =
+    Http.get
+        { url = "/init.json"
+        , expect = Http.expectJson GotResult (D.field "body" (D.field "count" D.int))
+        }
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -43,27 +52,49 @@ update msg model =
     case msg of
         Increment ->
             case model of
+                Number 10 ->
+                    ( Number 10
+                    , initNumber ()
+                    )
+
                 Number num ->
-                    ( Number (num + 1), Cmd.none )
+                    ( Number (num + 1)
+                    , Cmd.none
+                    )
 
                 _ ->
-                    ( model, Cmd.none )
+                    ( model
+                    , Cmd.none
+                    )
 
         Decrement ->
             case model of
+                Number 0 ->
+                    ( Number 0
+                    , initNumber ()
+                    )
+
                 Number num ->
-                    ( Number (num - 1), Cmd.none )
+                    ( Number (num - 1)
+                    , Cmd.none
+                    )
 
                 _ ->
-                    ( model, Cmd.none )
+                    ( model
+                    , Cmd.none
+                    )
 
         GotResult result ->
             case result of
                 Ok num ->
-                    ( Number num, Cmd.none )
+                    ( Number num
+                    , Cmd.none
+                    )
 
                 Err _ ->
-                    ( Failure, Cmd.none )
+                    ( Failure
+                    , Cmd.none
+                    )
 
 
 view : Model -> Browser.Document Msg
