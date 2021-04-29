@@ -1,8 +1,9 @@
 module Main exposing (main)
 
 import Browser
-import Html exposing (button, div, text)
-import Html.Events exposing (onClick)
+import Html exposing (Html, button, dd, div, dl, dt, input, li, text, ul)
+import Html.Attributes exposing (checked, style, type_)
+import Html.Events exposing (onCheck, onClick)
 import Http
 import Json.Decode as D
 
@@ -17,96 +18,91 @@ main =
         }
 
 
-type alias Model =
-    Counter
-
-
-type Counter
+type Model
     = Loading
     | Failure
-    | Number Int
+    | Page { count : Int, items : MyItems }
 
 
-type alias MyInput =
+type alias MyItem =
+    { id : Int
+    , title : String
+    , done : Bool
+    }
+
+
+type alias MyItems =
+    List MyItem
+
+
+type alias MyResponse =
     { success : Bool
     , count : Int
+    , items : MyItems
     }
 
 
 type Msg
-    = Increment
-    | Decrement
-    | GotResult (Result Http.Error MyInput)
+    = Load
+    | GotResult (Result Http.Error MyResponse)
+    | ToggleDone Int Bool
 
 
 init : () -> ( Model, Cmd Msg )
 init _ =
     ( Loading
-    , initNumber ()
+    , loadPage ()
     )
 
 
-initNumber : () -> Cmd Msg
-initNumber _ =
+loadPage : () -> Cmd Msg
+loadPage _ =
     Http.get
         { url = "/init.json"
-        , expect = Http.expectJson GotResult decodeInput
+        , expect = Http.expectJson GotResult decodeResponse
         }
 
 
-decodeInput : D.Decoder MyInput
-decodeInput =
-    D.map2 MyInput
+decodeResponse : D.Decoder MyResponse
+decodeResponse =
+    D.map3 MyResponse
         (D.field "status"
             (D.field "success" D.bool)
         )
         (D.field "body"
             (D.field "count" D.int)
         )
+        (D.field "body"
+            (D.field "items" itemsDecoder)
+        )
+
+
+itemsDecoder : D.Decoder MyItems
+itemsDecoder =
+    D.list itemDecoder
+
+
+itemDecoder : D.Decoder MyItem
+itemDecoder =
+    D.map3 MyItem
+        (D.field "id" D.int)
+        (D.field "title" D.string)
+        (D.field "done" D.bool)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        Increment ->
-            case model of
-                Number 10 ->
-                    ( Number 10
-                    , initNumber ()
-                    )
-
-                Number num ->
-                    ( Number (num + 1)
-                    , Cmd.none
-                    )
-
-                _ ->
-                    ( model
-                    , Cmd.none
-                    )
-
-        Decrement ->
-            case model of
-                Number 0 ->
-                    ( Number 0
-                    , initNumber ()
-                    )
-
-                Number num ->
-                    ( Number (num - 1)
-                    , Cmd.none
-                    )
-
-                _ ->
-                    ( model
-                    , Cmd.none
-                    )
+        Load ->
+            ( model
+            , loadPage ()
+            )
 
         GotResult result ->
             case result of
                 Ok input ->
                     if input.success then
-                        ( Number input.count
+                        ( Page { count = input.count, items = input.items }
                         , Cmd.none
                         )
 
@@ -119,6 +115,27 @@ update msg model =
                     ( Failure
                     , Cmd.none
                     )
+
+        ToggleDone id checked ->
+            case model of
+                Page data ->
+                    ( Page { data | items = List.map (toggleDone id checked) data.items }
+                    , Cmd.none
+                    )
+
+                _ ->
+                    ( model
+                    , Cmd.none
+                    )
+
+
+toggleDone : Int -> Bool -> MyItem -> MyItem
+toggleDone id checked item =
+    if id == item.id then
+        { item | done = checked }
+
+    else
+        item
 
 
 view : Model -> Browser.Document Msg
@@ -141,17 +158,44 @@ view model =
                 ]
             }
 
-        Number num ->
-            { title = "Count: " ++ String.fromInt num
+        Page data ->
+            { title = "Total Items: " ++ String.fromInt data.count
             , body =
                 [ div []
-                    [ text ("Count is " ++ String.fromInt num) ]
+                    [ text ("Item count is " ++ String.fromInt data.count) ]
+                , ul []
+                    (List.map viewItem data.items)
                 , div []
-                    [ button [ onClick Decrement ] [ text "Decrement" ]
-                    , button [ onClick Increment ] [ text "Increment" ]
-                    ]
+                    [ button [ onClick Load ] [ text "Reload" ] ]
                 ]
             }
+
+
+viewItem : MyItem -> Html Msg
+viewItem item =
+    li
+        (if item.done then
+            [ style "background-color" "#ddd" ]
+
+         else
+            []
+        )
+        [ dl []
+            [ dt [] [ text "ID" ]
+            , dd [] [ String.fromInt item.id |> text ]
+            , dt [] [ text "Title" ]
+            , dd [] [ text item.title ]
+            , dt [] [ text "Done?" ]
+            , dd []
+                [ input
+                    [ type_ "checkbox"
+                    , checked item.done
+                    , onCheck (ToggleDone item.id)
+                    ]
+                    []
+                ]
+            ]
+        ]
 
 
 subscriptions : Model -> Sub Msg
