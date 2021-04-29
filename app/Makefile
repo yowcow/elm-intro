@@ -13,8 +13,8 @@ build: $(ARTIFACT)
 		| npx uglifyjs --mangle --output $@
 
 $(DIST)/main.js: src/Main.elm
-	#elm make $< --optimize --output=$@
-	elm make $< --output=$@
+	elm make $< --optimize --output=$@
+	#elm make $< --output=$@
 
 clean:
 	rm -rf $(DIST)

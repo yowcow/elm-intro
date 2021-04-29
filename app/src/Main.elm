@@ -4,6 +4,8 @@ import Browser
 import Html exposing (Html, button, dd, div, dl, dt, input, li, text, ul)
 import Html.Attributes exposing (checked, style, type_)
 import Html.Events exposing (onCheck, onClick)
+import Html.Keyed as Keyed
+import Html.Lazy exposing (lazy, lazy2)
 import Http
 import Json.Decode as D
 
@@ -160,15 +162,26 @@ view model =
 
         Page data ->
             { title = "Total Items: " ++ String.fromInt data.count
-            , body =
-                [ div []
-                    [ text ("Item count is " ++ String.fromInt data.count) ]
-                , ul []
-                    (List.map viewItem data.items)
-                , div []
-                    [ button [ onClick Load ] [ text "Reload" ] ]
-                ]
+            , body = [ lazy2 viewPage data.count data.items ]
             }
+
+
+viewPage : Int -> MyItems -> Html Msg
+viewPage count items =
+    div []
+        [ div []
+            [ text ("Item count is " ++ String.fromInt count) ]
+        , Keyed.node "ul"
+            []
+            (List.map viewKeyedItem items)
+        , div []
+            [ button [ onClick Load ] [ text "Reload" ] ]
+        ]
+
+
+viewKeyedItem : MyItem -> ( String, Html Msg )
+viewKeyedItem item =
+    ( String.fromInt item.id, lazy viewItem item )
 
 
 viewItem : MyItem -> Html Msg
