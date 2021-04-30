@@ -1,7 +1,7 @@
 module Main exposing (main)
 
 import Browser
-import Html exposing (Html, button, dd, div, dl, dt, input, li, text, ul)
+import Html exposing (Html, button, dd, div, dl, dt, input, li, text)
 import Html.Attributes exposing (checked, style, type_)
 import Html.Events exposing (onCheck, onClick)
 import Html.Keyed as Keyed
