@@ -4,6 +4,7 @@ import Browser
 import Browser.Navigation as Nav
 import Html as H
 import Html.Attributes as HA
+import Html.Keyed as HK
 import Html.Lazy as HL
 import Url
 import Url.Parser as U exposing ((</>), (<?>))
@@ -131,7 +132,7 @@ view model =
 
                     profile :: _ ->
                         -- take the first match
-                        HL.lazy viewProfile profile
+                        HL.lazy viewPerson profile
 
             Review title page ->
                 HL.lazy2 viewReview title page
@@ -170,21 +171,25 @@ viewProfiles : List Person -> H.Html Msg
 viewProfiles people =
     H.div []
         [ H.h1 [] [ H.text "Profiles" ]
-        , H.ul []
-            -- prepending a link to non-existing profile
-            (viewLink "/profiles/9999"
-                :: List.map
-                    (\p ->
-                        H.li []
-                            [ H.a [ HA.href <| "/profiles/" ++ String.fromInt p.id ] [ H.text p.name ] ]
-                    )
-                    people
-            )
+        , HK.node "ul"
+            []
+            (List.map viewKeyedProfile <| people ++ [ { id = 9999, name = "John Doe", location = "Nowhere" } ])
         ]
+
+
+viewKeyedProfile : Person -> ( String, H.Html Msg )
+viewKeyedProfile p =
+    ( String.fromInt p.id, HL.lazy viewProfile p )
 
 
 viewProfile : Person -> H.Html Msg
 viewProfile p =
+    H.li []
+        [ H.a [ HA.href <| "/profiles/" ++ String.fromInt p.id ] [ H.text p.name ] ]
+
+
+viewPerson : Person -> H.Html Msg
+viewPerson p =
     H.div []
         [ H.h1 [] [ H.text <| "Profile: " ++ p.name ]
         , H.dl []
