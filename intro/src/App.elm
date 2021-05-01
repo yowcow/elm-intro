@@ -37,7 +37,13 @@ type Route
     | Home
     | Profiles
     | Profile Int
-    | Review String (Maybe Int)
+    | Review String ReviewQuery
+
+
+type alias ReviewQuery =
+    { page : Maybe Int
+    , text : Maybe String
+    }
 
 
 type alias Person =
@@ -97,7 +103,7 @@ route =
         , U.map Home (U.s "home")
         , U.map Profiles (U.s "profiles")
         , U.map Profile (U.s "profiles" </> U.int)
-        , U.map Review (U.s "reviews" </> U.string <?> Q.int "page")
+        , U.map Review (U.s "reviews" </> U.string <?> Q.map2 ReviewQuery (Q.int "page") (Q.string "text"))
         ]
 
 
@@ -134,8 +140,8 @@ view model =
                         -- take the first match
                         HL.lazy viewPerson profile
 
-            Review title page ->
-                HL.lazy2 viewReview title page
+            Review title query ->
+                HL.lazy2 viewReview title query
 
             _ ->
                 viewNotFound
@@ -154,7 +160,7 @@ viewHeader model =
             , viewLink "/home"
             , viewLink "/profiles"
             , viewLink "/reviews/the-centry-of-the-self"
-            , viewLink "/reviews/public-opinion?page=123"
+            , viewLink "/reviews/public-opinion?page=123&text=large"
             , viewLink "https://github.com/"
             ]
         , H.hr [] []
@@ -199,16 +205,22 @@ viewPerson p =
         ]
 
 
-viewReview : String -> Maybe Int -> H.Html Msg
-viewReview title page =
+viewReview : String -> ReviewQuery -> H.Html Msg
+viewReview title query =
     H.div []
         [ H.h1 [] [ H.text <| "Review: " ++ title ]
-        , case page of
+        , case query.page of
             Just p ->
                 H.div [] [ H.text <| "Page: " ++ String.fromInt p ]
 
             Nothing ->
                 H.div [] [ H.text "No specific page" ]
+        , case query.text of
+            Just s ->
+                H.div [] [ H.text <| "Text: " ++ s ]
+
+            Nothing ->
+                H.div [] [ H.text "No specific text size" ]
         ]
 
 
