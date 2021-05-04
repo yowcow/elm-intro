@@ -1,13 +1,8 @@
 module Main exposing (main)
 
 import Browser
-import Html exposing (Html, button, dd, div, dl, dt, input, li, text)
-import Html.Attributes exposing (checked, style, type_)
-import Html.Events exposing (onCheck, onClick)
-import Html.Keyed as Keyed
-import Html.Lazy exposing (lazy, lazy2)
-import Http
-import Json.Decode as D
+import Html
+import Page.Items as Items
 
 
 main : Program () Model Msg
@@ -15,202 +10,47 @@ main =
     Browser.document
         { init = init
         , update = update
-        , view = view
         , subscriptions = subscriptions
+        , view = view
         }
 
 
 type Model
-    = Loading
-    | Failure
-    | Page { count : Int, items : MyItems }
-
-
-type alias MyItem =
-    { id : Int
-    , title : String
-    , done : Bool
-    }
-
-
-type alias MyItems =
-    List MyItem
-
-
-type alias MyResponse =
-    { success : Bool
-    , count : Int
-    , items : MyItems
-    }
+    = Items Items.Model
 
 
 type Msg
-    = Load
-    | GotResult (Result Http.Error MyResponse)
-    | ToggleDone Int Bool
+    = GotItemsMsg Items.Msg
 
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( Loading
-    , loadPage ()
+    Items.init |> wrapWith Items GotItemsMsg
+
+
+wrapWith : (subModel -> Model) -> (subMsg -> Msg) -> ( subModel, Cmd subMsg ) -> ( Model, Cmd Msg )
+wrapWith toModel toMsg ( subModel, subCmd ) =
+    ( toModel subModel
+    , Cmd.map toMsg subCmd
     )
-
-
-loadPage : () -> Cmd Msg
-loadPage _ =
-    Http.get
-        { url = "/init.json"
-        , expect = Http.expectJson GotResult decodeResponse
-        }
-
-
-decodeResponse : D.Decoder MyResponse
-decodeResponse =
-    D.map3 MyResponse
-        (D.field "status"
-            (D.field "success" D.bool)
-        )
-        (D.field "body"
-            (D.field "count" D.int)
-        )
-        (D.field "body"
-            (D.field "items" itemsDecoder)
-        )
-
-
-itemsDecoder : D.Decoder MyItems
-itemsDecoder =
-    D.list itemDecoder
-
-
-itemDecoder : D.Decoder MyItem
-itemDecoder =
-    D.map3 MyItem
-        (D.field "id" D.int)
-        (D.field "title" D.string)
-        (D.field "done" D.bool)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    case msg of
-        Load ->
-            ( model
-            , loadPage ()
-            )
-
-        GotResult result ->
-            case result of
-                Ok input ->
-                    if input.success then
-                        ( Page { count = input.count, items = input.items }
-                        , Cmd.none
-                        )
-
-                    else
-                        ( Failure
-                        , Cmd.none
-                        )
-
-                Err _ ->
-                    ( Failure
-                    , Cmd.none
-                    )
-
-        ToggleDone id checked ->
-            case model of
-                Page data ->
-                    ( Page { data | items = List.map (toggleDone id checked) data.items }
-                    , Cmd.none
-                    )
-
-                _ ->
-                    ( model
-                    , Cmd.none
-                    )
-
-
-toggleDone : Int -> Bool -> MyItem -> MyItem
-toggleDone id checked item =
-    if id == item.id then
-        { item | done = checked }
-
-    else
-        item
-
-
-view : Model -> Browser.Document Msg
-view model =
-    case model of
-        Loading ->
-            { title = "Loading..."
-            , body =
-                [ div []
-                    [ text "Loading..." ]
-                ]
-            }
-
-        Failure ->
-            { title = "Something went wrong :|"
-            , body =
-                [ div []
-                    [ text "Something went wrong :|"
-                    ]
-                ]
-            }
-
-        Page data ->
-            { title = "Total Items: " ++ String.fromInt data.count
-            , body = [ lazy2 viewPage data.count data.items ]
-            }
-
-
-viewPage : Int -> MyItems -> Html Msg
-viewPage count items =
-    div []
-        [ div []
-            [ text ("Item count is " ++ String.fromInt count) ]
-        , Keyed.node "ul"
-            []
-            (List.map viewKeyedItem items)
-        , div []
-            [ button [ onClick Load ] [ text "Reload" ] ]
-        ]
-
-
-viewKeyedItem : MyItem -> ( String, Html Msg )
-viewKeyedItem item =
-    ( String.fromInt item.id, lazy viewItem item )
-
-
-viewItem : MyItem -> Html Msg
-viewItem item =
-    li
-        (if item.done then
-            [ style "background-color" "#ddd" ]
-
-         else
-            []
-        )
-        [ dl []
-            [ dt [] [ text "ID" ]
-            , dd [] [ String.fromInt item.id |> text ]
-            , dt [] [ text "Title" ]
-            , dd [] [ text item.title ]
-            , dt [] [ text "Done?" ]
-            , dd []
-                [ input
-                    [ type_ "checkbox"
-                    , checked item.done
-                    , onCheck (ToggleDone item.id)
-                    ]
-                    []
-                ]
-            ]
-        ]
+    case ( msg, model ) of
+        ( GotItemsMsg subMsg, Items subModel ) ->
+            Items.update subMsg subModel |> wrapWith Items GotItemsMsg
 
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
     Sub.none
+
+
+view : Model -> Browser.Document Msg
+view model =
+    case model of
+        Items subModel ->
+            { title = "Items!!"
+            , body = [ Items.view subModel |> Html.map GotItemsMsg ]
+            }
