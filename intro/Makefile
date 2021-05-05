@@ -12,4 +12,7 @@ reactor:
 clean:
 	rm -rf _out
 
-.PHONY: all reactor clean
+test:
+	npx elm-test
+
+.PHONY: all reactor clean test
