@@ -5,48 +5,103 @@ import Json.Decode as D
 import Test exposing (..)
 
 
+success : Result a b -> Bool
+success result =
+    case result of
+        Ok _ ->
+            True
+
+        Err _ ->
+            False
+
+
 currentObservationDecoderTest : Test
 currentObservationDecoderTest =
-    test "decodes currentObservation" <|
-        \_ ->
-            let
-                inputJson =
-                    """
-                        { "city": "Boston",
-                          "state": "MA",
-                          "temp_f": 98.6 }
-                    """
+    describe "currentObservationDecoder" <|
+        [ test "OK" <|
+            \_ ->
+                let
+                    inputJson =
+                        """
+                            { "city": "Boston",
+                              "state": "MA",
+                              "temp_f": 98.6 }
+                        """
 
-                output =
-                    D.decodeString currentObservationDecoder inputJson
-            in
-            Expect.equal output
-                (Ok { city = "Boston", state = "MA", tempF = 98.6 })
+                    expected =
+                        True
+                in
+                Expect.equal (D.decodeString currentObservationDecoder inputJson |> success) expected
+        , test "missing key is not OK" <|
+            \_ ->
+                let
+                    inputJson =
+                        "{}"
+
+                    expected =
+                        False
+                in
+                Expect.equal (D.decodeString currentObservationDecoder inputJson |> success) expected
+        , test "wrong temp_f types is not OK" <|
+            \_ ->
+                let
+                    inputJson =
+                        """
+                            {"city": "Boston",
+                             "state": "MA",
+                             "temp_f": "98.6"
+                            }
+                        """
+
+                    expected =
+                        False
+                in
+                Expect.equal (D.decodeString currentObservationDecoder inputJson |> success) expected
+        ]
 
 
 weatherConditionsDecoderTest : Test
 weatherConditionsDecoderTest =
-    test "decode weatherConditions" <|
-        \_ ->
-            let
-                inputJson =
-                    """
-                    {
-                        "current_observations": {
-                            "city": "Tokyo",
-                            "state": "Tokyo",
-                            "temp_f": 68.456
-                        }
-                    }
-                    """
+    describe "weatherConditionsDecoder" <|
+        [ test "OK" <|
+            \_ ->
+                let
+                    inputJson =
+                        """
+                            {
+                                "current_observations": {
+                                    "city": "Tokyo",
+                                    "state": "Tokyo",
+                                    "temp_f": 68.456
+                                }
+                            }
+                        """
 
-                expected =
-                    Ok
-                        { currentObservation =
-                            { city = "Tokyo", state = "Tokyo", tempF = 68.456 }
-                        }
-            in
-            Expect.equal (inputJson |> D.decodeString weatherConditionsDecoder) expected
+                    expected =
+                        True
+                in
+                Expect.equal (inputJson |> D.decodeString weatherConditionsDecoder |> success) expected
+        , test "empty JSON is Not OK" <|
+            \_ ->
+                let
+                    inputJson =
+                        ""
+
+                    expected =
+                        False
+                in
+                Expect.equal (inputJson |> D.decodeString weatherConditionsDecoder |> success) expected
+        , test "no current_observations is not OK" <|
+            \_ ->
+                let
+                    inputJson =
+                        "{}"
+
+                    expected =
+                        False
+                in
+                Expect.equal (inputJson |> D.decodeString weatherConditionsDecoder |> success) expected
+        ]
 
 
 type alias WeatherConditions =
